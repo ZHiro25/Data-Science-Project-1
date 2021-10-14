@@ -1,0 +1,38 @@
+[Syllabus](https://docs.google.com/document/d/1qeP6DUS8Djq_A0HMllMqsSqX3a9dbcx1/edit?usp=sharing&ouid=110386251748498665069&rtpof=true&sd=true) for more information.
+
+```{r setup}
+library(tidyverse)
+
+```
+
+
+Loading the income data
+
+```{r q1-task}
+## TASK: Load the census bureau data with the following tibble name.
+df_dummy <-
+  read.csv("./data/ACSST1Y2019.S2001_data_with_overlays_2021-10-14T122803.csv", skip = 1)
+```
+
+```{r}
+## Rearranging the table to just be county state and median income
+
+df_income <-
+  df_dummy %>%
+  separate(
+    col = 'Geographic.Area.Name',
+    into = c('county', 'state'),
+    sep = ','
+  ) %>%
+  separate(
+    col = id,
+    into = c("id","fips"),
+    sep = -5
+  ) %>%
+  select(fips, state, county, 5, 7)
+
+names(df_income) <- c('fips', 'state', 'county', 'pop', 'income')
+
+df_income
+```
+
