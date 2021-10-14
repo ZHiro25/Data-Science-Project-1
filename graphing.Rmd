@@ -1,0 +1,76 @@
+---
+title: "COVID-19 Project Graphs"
+date: 2020-10-14
+output:
+  github_document:
+    toc: true
+---
+
+```{r setup, message = FALSE}
+library(tidyverse)
+library(ggrepel)
+library(gridExtra)
+```
+
+```{r download_data, warning = FALSE}
+df_pop <- read.csv(file = "data/ACSDT5Y2018.B01003_2021-10-05T112429/ACSDT5Y2018.B01003_data_with_overlays_2021-10-05T112340.csv", skip = 1)
+url_counties <- "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+url_vaccines <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv"
+
+filename_nyt <- "./data/nyt_counties.csv"
+filename_cdc <- "./data/cdc_vaccines.csv"
+
+## Download the data locally
+curl::curl_download(
+        url_counties,
+        destfile = filename_nyt
+      )
+curl::curl_download(
+        url_vaccines,
+        destfile = filename_cdc
+      )
+
+
+## Loads the downloaded csv
+df_covid <- read_csv(filename_nyt)
+df_vaccines <- read_csv(filename_cdc)
+
+```
+
+```{r}
+df_pop_fips <- df_pop %>% 
+  filter(nchar(id) > 9) %>% 
+  separate(col = id, into = c("num", "fips"), sep = -5, remove = FALSE)
+
+df_data <- 
+  inner_join(
+  df_covid,
+  df_pop_fips,
+  by = "fips"
+  ) %>% 
+  select(
+    date,
+    county,
+    state,
+    fips,
+    cases,
+    deaths,
+    population = `Estimate..Total`
+  )
+
+df_normalized <-
+  df_data %>% 
+    mutate(
+      cases_per100k = 100000 * cases / population, 
+      deaths_per100k = 100000 * deaths / population
+    )
+```
+
+```{r}
+
+
+
+```
+
+
+
