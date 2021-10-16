@@ -14,6 +14,7 @@ library(gridExtra)
 
 ```{r download_data, warning = FALSE}
 df_pop <- read.csv(file = "data/ACSDT5Y2018.B01003_2021-10-05T112429/ACSDT5Y2018.B01003_data_with_overlays_2021-10-05T112340.csv", skip = 1)
+df_dummy <- read.csv("./data/ACSST1Y2019.S2001_data_with_overlays_2021-10-14T122803.csv", skip = 1)
 url_counties <- "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
 url_vaccines <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv"
 
@@ -36,41 +37,110 @@ df_covid <- read_csv(filename_nyt)
 df_vaccines <- read_csv(filename_cdc)
 
 ```
+```{r clean up income}
+df_income <-
+  df_dummy %>%
+  separate(
+    col = 'Geographic.Area.Name',
+    into = c('county', 'state'),
+    sep = ','
+  ) %>%
+  separate(
+    col = id,
+    into = c("id","fips"),
+    sep = -5
+  ) %>%
+  select(fips, state, county, 5, 7)
 
-```{r}
+names(df_income) <- c('fips', 'state', 'county', 'pop', 'income')
+
+df_income
+```
+
+```{r cleaning_data}
 df_pop_fips <- df_pop %>% 
   filter(nchar(id) > 9) %>% 
-  separate(col = id, into = c("num", "fips"), sep = -5, remove = FALSE)
+  separate(col = id, into = c(NA, "fips"), sep = -5, remove = FALSE)
 
 df_data <- 
   inner_join(
-  df_covid,
-  df_pop_fips,
-  by = "fips"
+    df_covid,
+    df_pop_fips,
+    by = "fips"
   ) %>% 
+  inner_join(
+    df_income,
+    by = "fips"
+  ) %>%
   select(
     date,
-    county,
-    state,
+    county = county.x,
+    state = county.x,
     fips,
     cases,
     deaths,
-    population = `Estimate..Total`
+    population = `Estimate..Total`,
+    median_income = "income"
   )
 
 df_normalized <-
   df_data %>% 
-    mutate(
-      cases_per100k = 100000 * cases / population, 
-      deaths_per100k = 100000 * deaths / population
-    )
+  mutate(
+    cases_per100k = 100000 * cases / population, 
+    deaths_per100k = 100000 * deaths / population
+  )
+
+df_fatality <- 
+  df_normalized %>%
+  group_by(county) %>% 
+  filter(date == max(date)) %>% 
+  summarize(state, fatality = deaths_per100k / cases_per100k, median_income, population, cases_per100k, deaths_per100k)
 ```
 
-```{r}
+```{r graphs, fig.width = 16, fig.height = 8}
+
+df_graph <- 
+  df_fatality %>% 
+  filter(population > 1e4 & population < 1e7) %>% 
+  mutate(pop_bin = cut(x = population, breaks = c(0, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8)))
+
+g_fatality <- df_graph %>% 
+  ggplot(aes(median_income, fatality, color = pop_bin)) +
+  geom_point(na.rm = TRUE) +
+  geom_smooth(method = "glm", formula = "y ~ log(x)", na.rm = TRUE, se = TRUE) +
+  theme(legend.position = "bottom") +
+  scale_x_log10(labels = scales::label_number_si()) +
+  labs(color = "pop") +
+  facet_grid(pop_bin ~ .)
 
 
+g_deaths <- df_graph %>% 
+  ggplot(aes(median_income, deaths_per100k, color = pop_bin)) +
+  geom_point(na.rm = TRUE) +
+  geom_smooth(method = "glm", formula = "y ~ log(x)", na.rm = TRUE, se = TRUE) +
+  theme(legend.position = "bottom") +
+  scale_x_log10(labels = scales::label_number_si()) +
+  labs(color = "pop") +
+  facet_grid(pop_bin ~ .)
 
+
+g_cases <- df_graph %>% 
+  ggplot(aes(median_income, cases_per100k, color = pop_bin)) +
+  geom_point(na.rm = TRUE) +
+  geom_smooth(method = "glm", formula = "y ~ log(x)", na.rm = TRUE, se = TRUE) +
+  theme(legend.position = "bottom") +
+  scale_x_log10(labels = scales::label_number_si()) +
+  labs(color = "pop") +
+  facet_grid(pop_bin ~ .)
+
+grid.arrange(g_fatality, g_deaths, g_cases, nrow = 1)
 ```
+
+
+
+
+
+
 
 
 
