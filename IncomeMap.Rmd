@@ -2,6 +2,12 @@
 
 ```{r setup}
 library(tidyverse)
+library(ggrepel)
+library(maps)
+library(choroplethr)
+library(choroplethrMaps)
+library(usmap)
+library(viridis)
 
 ```
 
@@ -35,4 +41,15 @@ names(df_income) <- c('fips', 'state', 'county', 'pop', 'income')
 
 df_income
 ```
+
+```{r}
+plot_usmap(data = df_income, values = "income", regions = "counties", color = "white") + 
+  scale_fill_continuous(
+    low = "grey", high = "red", 
+    name = "Median Income", 
+    label = scales::comma
+  ) + 
+  theme(legend.position = "right")
+```
+
 
