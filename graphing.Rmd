@@ -118,7 +118,8 @@ cor_fatality <-
   group_by(pop_bin) %>%
   summarize(
     rho = cor(median_income, fatality, method = "spearman", use = "pairwise.complete.obs"),
-    std = sd(fatality, na.rm = TRUE)
+    std = sd(fatality, na.rm = TRUE),
+    cov = sd(fatality, na.rm = TRUE) / mean(fatality, na.rm = TRUE)
   )
 
 cor_fatality
@@ -128,7 +129,8 @@ cor_deaths <-
   group_by(pop_bin) %>%
   summarize(
     rho = cor(median_income, deaths_per100k, method = "spearman", use = "pairwise.complete.obs"),
-    std = sd(deaths_per100k, na.rm = TRUE)
+    std = sd(deaths_per100k, na.rm = TRUE),
+    cov = sd(deaths_per100k, na.rm = TRUE) / mean(deaths_per100k, na.rm = TRUE)
   )
 
 cor_deaths
@@ -138,7 +140,8 @@ cor_cases <-
   group_by(pop_bin) %>%
   summarize(
     rho = cor(median_income, cases_per100k, method = "spearman", use = "pairwise.complete.obs"),
-    std = sd(cases_per100k, na.rm = TRUE)
+    std = sd(cases_per100k, na.rm = TRUE),
+    cov = sd(cases_per100k, na.rm = TRUE) / mean(cases_per100k, na.rm = TRUE)
   )
 
 cor_cases
@@ -162,7 +165,7 @@ g_fatality <- df_graph %>%
   theme(strip.text.y = element_blank()) +
   geom_text(
     data = cor_fatality, 
-    aes(label = paste("corr = ", round(rho, 2), sep = " ")), 
+    aes(label = paste("Cor = ", round(rho, 2), sep = " ")), 
     x = Inf, 
     y = Inf,
     vjust = 1.5, 
@@ -171,7 +174,7 @@ g_fatality <- df_graph %>%
   ) +
   geom_text(
     data = cor_fatality, 
-    aes(label = paste("std = ", round(std, 2), sep = " ")), 
+    aes(label = paste("CoV = ", round(cov, 2), sep = " ")), 
     x = Inf, 
     y = Inf,
     vjust = 3, 
@@ -197,7 +200,7 @@ g_deaths <- df_graph %>%
   theme(strip.text.y = element_blank()) +
   geom_text(
     data = cor_deaths, 
-    aes(label = paste("corr = ", round(rho, 2), sep = " ")), 
+    aes(label = paste("Cor = ", round(rho, 2), sep = " ")), 
     x = Inf, 
     y = Inf,
     vjust = 1.5, 
@@ -206,7 +209,7 @@ g_deaths <- df_graph %>%
   ) +
   geom_text(
     data = cor_deaths, 
-    aes(label = paste("std = ", round(std, 2), sep = " ")), 
+    aes(label = paste("CoV = ", round(cov, 2), sep = " ")), 
     x = Inf, 
     y = Inf,
     vjust = 3, 
@@ -232,7 +235,7 @@ g_cases <- df_graph %>%
   theme(strip.text.y = element_blank()) +
   geom_text(
     data = cor_cases, 
-    aes(label = paste("corr = ", round(rho, 2), sep = " ")), 
+    aes(label = paste("Cor = ", round(rho, 2), sep = " ")), 
     x = Inf, 
     y = Inf,
     vjust = 1.5, 
@@ -241,7 +244,7 @@ g_cases <- df_graph %>%
   ) +
   geom_text(
     data = cor_cases, 
-    aes(label = paste("std = ", round(std, 2), sep = " ")), 
+    aes(label = paste("CoV = ", round(cov, 2), sep = " ")), 
     x = Inf, 
     y = Inf,
     vjust = 3, 
@@ -253,6 +256,7 @@ g_cases <- df_graph %>%
 ```{r create plots, fig.width = 10, fig.height = 8}
 
 grid.arrange(g_fatality, g_deaths, g_cases, nrow = 1)
+g_fatality
 
 ggsave(
   filename = "Fatality_vs_Income_vs_Population.png",
