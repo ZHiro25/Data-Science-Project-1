@@ -254,7 +254,10 @@ g_cases <- df_graph %>%
 
 grid.arrange(g_fatality, g_deaths, g_cases, nrow = 1)
 
-g_fatality
+ggsave(
+  filename = "Fatality_vs_Income_vs_Population.png",
+  plot = g_fatality
+)
 
 ggsave(
   filename = "HeadlineGraph.png",
