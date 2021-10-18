@@ -14,7 +14,7 @@ library(gridExtra)
 
 ```{r download_data, warning = FALSE}
 df_pop <- read.csv(file = "data/ACSDT5Y2018.B01003_2021-10-05T112429/ACSDT5Y2018.B01003_data_with_overlays_2021-10-05T112340.csv", skip = 1)
-df_dummy <- read.csv("./data/ACSST1Y2019.S2001_data_with_overlays_2021-10-14T122803.csv", skip = 1)
+df_dummy <- read.csv("./data/ACSDT5Y2018.B19013_data_with_overlays_2021-10-18T125201.csv", skip = 1)
 url_counties <- "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
 url_vaccines <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv"
 
@@ -36,6 +36,8 @@ curl::curl_download(
 df_covid <- read_csv(filename_nyt)
 df_vaccines <- read_csv(filename_cdc)
 
+df_dummy %>% summary()
+
 ```
 ```{r clean up income}
 df_income <-
@@ -50,9 +52,14 @@ df_income <-
     into = c("id","fips"),
     sep = -5
   ) %>%
-  select(fips, state, county, 5, 7)
+  select(
+    fips, 
+    state, 
+    county, 
+    median_income = 5
+  )
 
-names(df_income) <- c('fips', 'state', 'county', 'pop', 'income')
+df_income$median_income = as.numeric(df_income$median_income)
 
 df_income
 ```
@@ -80,7 +87,7 @@ df_data <-
     cases,
     deaths,
     population = `Estimate..Total`,
-    median_income = "income"
+    median_income
   )
 
 df_normalized <-
@@ -95,42 +102,52 @@ df_fatality <-
   group_by(county) %>% 
   filter(date == max(date)) %>% 
   summarize(state, fatality = 100 * deaths_per100k / cases_per100k, median_income, population, cases_per100k, deaths_per100k)
+
 ```
 
 ```{r data manipulation}
+df_graph <- 
+  df_fatality %>% 
+  filter(population > 1e3 & population < 1e7 & median_income > 25000) %>% 
+  mutate(
+    pop_bin = cut(x = population, breaks = c(0, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8))
+  )
+
 cor_fatality <-
   df_graph %>%
   group_by(pop_bin) %>%
-  summarize(rho = cor(median_income, fatality, method = "spearman", use = "pairwise.complete.obs"))
+  summarize(
+    rho = cor(median_income, fatality, method = "spearman", use = "pairwise.complete.obs"),
+    std = sd(fatality, na.rm = TRUE)
+  )
 
 cor_fatality
 
 cor_deaths <-
   df_graph %>%
   group_by(pop_bin) %>%
-  summarize(rho = cor(median_income, deaths_per100k, method = "spearman", use = "pairwise.complete.obs"))
+  summarize(
+    rho = cor(median_income, deaths_per100k, method = "spearman", use = "pairwise.complete.obs"),
+    std = sd(deaths_per100k, na.rm = TRUE)
+  )
 
 cor_deaths
 
 cor_cases <-
   df_graph %>%
   group_by(pop_bin) %>%
-  summarize(rho = cor(median_income, cases_per100k, method = "spearman", use = "pairwise.complete.obs"))
+  summarize(
+    rho = cor(median_income, cases_per100k, method = "spearman", use = "pairwise.complete.obs"),
+    std = sd(cases_per100k, na.rm = TRUE)
+  )
 
 cor_cases
-
-df_graph <- 
-  df_fatality %>% 
-  filter(population > 1e4 & population < 1e7) %>% 
-  mutate(
-    pop_bin = cut(x = population, breaks = c(0, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8))
-  )
 ```
 
-```{r graphing, fig.width = 16, fig.height = 8}
+```{r graphing}
 g_fatality <- df_graph %>% 
   ggplot(aes(median_income, fatality, color = pop_bin)) +
-  geom_point(na.rm = TRUE) +
+  geom_point(na.rm = TRUE, size = 0.8) +
   geom_smooth(method = "glm", formula = "y ~ log(x)", na.rm = TRUE, se = TRUE) +
   theme(legend.position = "bottom") +
   scale_x_log10(labels = scales::label_number_si()) +
@@ -140,8 +157,8 @@ g_fatality <- df_graph %>%
     color = "Population:",
     title = "County Fatality Rates vs Income"
   ) +
-  scale_color_discrete(labels = c("10K-100K", "100K-1M", "1M-10M")) +
-  facet_grid(pop_bin ~ ., scales = "free_y") +
+  scale_color_discrete(labels = c("1K-10K", "10K-100K", "100K-1M", "1M-10M")) +
+  facet_grid(pop_bin ~ .) +
   theme(strip.text.y = element_blank()) +
   geom_text(
     data = cor_fatality, 
@@ -151,12 +168,21 @@ g_fatality <- df_graph %>%
     vjust = 1.5, 
     hjust = 1.2, 
     show.legend = FALSE
+  ) +
+  geom_text(
+    data = cor_fatality, 
+    aes(label = paste("std = ", round(std, 2), sep = " ")), 
+    x = Inf, 
+    y = Inf,
+    vjust = 3, 
+    hjust = 1.2, 
+    show.legend = FALSE
   )
 
 
 g_deaths <- df_graph %>% 
   ggplot(aes(median_income, deaths_per100k, color = pop_bin)) +
-  geom_point(na.rm = TRUE) +
+  geom_point(na.rm = TRUE, size = 0.8) +
   geom_smooth(method = "glm", formula = "y ~ log(x)", na.rm = TRUE, se = TRUE) +
   theme(legend.position = "bottom") +
   scale_x_log10(labels = scales::label_number_si()) +
@@ -166,8 +192,8 @@ g_deaths <- df_graph %>%
     color = "Population:",
     title = "County Death Rates vs Income"
   ) +
-  scale_color_discrete(labels = c("10K-100K", "100K-1M", "1M-10M")) +
-  facet_grid(pop_bin ~ ., scales = "free_y") +
+  scale_color_discrete(labels = c("1K-10K", "10K-100K", "100K-1M", "1M-10M")) +
+  facet_grid(pop_bin ~ .) +
   theme(strip.text.y = element_blank()) +
   geom_text(
     data = cor_deaths, 
@@ -177,12 +203,21 @@ g_deaths <- df_graph %>%
     vjust = 1.5, 
     hjust = 1.2, 
     show.legend = FALSE
+  ) +
+  geom_text(
+    data = cor_deaths, 
+    aes(label = paste("std = ", round(std, 2), sep = " ")), 
+    x = Inf, 
+    y = Inf,
+    vjust = 3, 
+    hjust = 1.2, 
+    show.legend = FALSE
   )
 
 
 g_cases <- df_graph %>% 
   ggplot(aes(median_income, cases_per100k, color = pop_bin)) +
-  geom_point(na.rm = TRUE) +
+  geom_point(na.rm = TRUE, size = 0.8) +
   geom_smooth(method = "glm", formula = "y ~ log(x)", na.rm = TRUE, se = TRUE) +
   theme(legend.position = "bottom") +
   scale_x_log10(labels = scales::label_number_si()) +
@@ -192,8 +227,8 @@ g_cases <- df_graph %>%
     color = "Population:",
     title = "County Case Rates vs Income"
   ) +
-  scale_color_discrete(labels = c("10K-100K", "100K-1M", "1M-10M")) +
-  facet_grid(pop_bin ~ ., scales = "free_y") +
+  scale_color_discrete(labels = c("1K-10K", "10K-100K", "100K-1M", "1M-10M")) +
+  facet_grid(pop_bin ~ .) +
   theme(strip.text.y = element_blank()) +
   geom_text(
     data = cor_cases, 
@@ -203,9 +238,23 @@ g_cases <- df_graph %>%
     vjust = 1.5, 
     hjust = 1.2, 
     show.legend = FALSE
+  ) +
+  geom_text(
+    data = cor_cases, 
+    aes(label = paste("std = ", round(std, 2), sep = " ")), 
+    x = Inf, 
+    y = Inf,
+    vjust = 3, 
+    hjust = 1.2, 
+    show.legend = FALSE
   )
+```
+
+```{r create plots, fig.width = 10, fig.height = 8}
 
 grid.arrange(g_fatality, g_deaths, g_cases, nrow = 1)
+
+g_fatality
 
 ggsave(
   filename = "HeadlineGraph.png",
