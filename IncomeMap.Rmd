@@ -41,6 +41,10 @@ names(df_income) <- c('fips', 'state', 'county', 'pop', 'income')
 
 df_income
 ```
+```{r}
+  
+```
+
 
 ```{r}
 plot_usmap(data = df_income, values = "income", regions = "counties", color = "white") + 

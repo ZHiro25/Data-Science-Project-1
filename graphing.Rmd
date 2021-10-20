@@ -67,9 +67,7 @@ df_normalized <-
 ```
 
 ```{r}
-
-
-
+df_data
 ```
 
 
