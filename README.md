@@ -1,10 +1,10 @@
 # Project 1
-Authors: Karen, James, Brent, Kyle, Jason, Keanu
+Authors: Karen, James, Brent, Kyle, Jacob, Keanu
 
 Date: Oct. 20th 2021
 
 ## Project Goal & Question
-The goal of this project was to analyze the relationship between median income of a county and how that might affect its COVID fatality rates, total cases, and total deaths. We wondered, “Would a higher median income lead to a lower fatality rate, and vice versa?”.
+The goal of this project was to analyze the relationship between median income of a county and how that might affect its COVID fatality rates, total cases, and total deaths. We wondered, “Would a higher median income lead to a lower fatality rate, and vice versa?” -[New York Times Github](https://github.com/nytimes/covid-19-data).
 
 ## Background
 Coronavirus disease (COVID-19) is an infectious disease caused by the SARS-CoV-2 virus. Most people who catch COVID-19 have mild symptoms, but some people become severely ill. Over 44 Million people in the United States have gotten COVID-19. Over 700 Thousand people in the United States have died from COVID-19. Vaccines have been developed against COVID-19 to effectively protect populations
